@@ -1,0 +1,201 @@
+import tkinter as tk
+from tkinter import messagebox
+from PIL import ImageTk, Image
+from random import shuffle
+from playsound import playsound
+import threading
+import os
+
+# ---------------- بيانات اللعبة ----------------
+questions = [
+    {
+        "question": "عاصمة فرنسا هي؟",
+        "answers": ["باريس", "مدريد", "روما", "برلين"],
+        "correct": "باريس",
+        "image": "france.jpg"
+    },
+    {
+        "question": "أكبر محيط في العالم هو؟",
+        "answers": ["الأطلسي", "الهادئ", "الهندي", "المتجمد الشمالي"],
+        "correct": "الهادئ",
+        "image": "ocean.jpg"
+    },
+    {
+        "question": "من هو مخترع الهاتف؟",
+        "answers": ["توماس إديسون", "ألكسندر غراهام بيل", "نيكولا تسلا", "غاليليو"],
+        "correct": "ألكسندر غراهام بيل",
+        "image": "phone.jpg"
+    },
+    {
+        "question": "أشهر لعبة كرة قدم في العالم هي؟",
+        "answers": ["فيفا", "برو إيفولوشن", "فورتنايت", "كاندي كراش"],
+        "correct": "فيفا",
+        "image": "fifa.jpg"
+    },
+    {
+        "question": "ما هو أسرع حيوان بري؟",
+        "answers": ["الفهد", "الأسد", "الغزال", "الفيل"],
+        "correct": "الفهد",
+        "image": "cheetah.jpg"
+    }
+]
+
+backgrounds = ["#222222", "#1a1a2e", "#0f3460", "#53354a", "#162447"]
+
+score_file = "highscores.txt"
+max_highscores = 5
+
+# ---------------- متغيرات ----------------
+current_question = 0
+score = 0
+time_left = 15
+photo = None
+
+# ---------------- واجهة اللعبة ----------------
+root = tk.Tk()
+root.title("لعبة كلمات كراش")
+root.geometry("700x600")
+root.resizable(False, False)
+
+# عداد النقاط
+score_label = tk.Label(root, text=f"النقاط: {score}", font=("Cairo", 16), fg="#1dd1a1")
+score_label.pack(pady=10)
+
+# عداد الوقت
+timer_label = tk.Label(root, text=f"الوقت: {time_left}", font=("Cairo", 16), fg="#ffdd57")
+timer_label.pack(pady=5)
+
+# صورة السؤال
+image_label = tk.Label(root, bg="#222222")
+image_label.pack(pady=10)
+
+# نص السؤال
+question_label = tk.Label(root, text="", font=("Cairo", 18), fg="#ffdd57", wraplength=650, justify="center")
+question_label.pack(pady=10)
+
+# أزرار الإجابات
+buttons_frame = tk.Frame(root)
+buttons_frame.pack(pady=20)
+
+# زر السؤال التالي
+next_btn = tk.Button(root, text="السؤال التالي", font=("Cairo", 14), bg="#1e90ff", fg="#fff", width=18)
+
+# ---------------- الدوال ----------------
+def play_sound(file):
+    threading.Thread(target=playsound, args=(file,), daemon=True).start()
+
+def check_answer(selected, btn):
+    global score
+    correct = questions[current_question]["correct"]
+    if selected == correct:
+        score += 10
+        btn.config(bg="#1dd1a1")
+        play_sound("correct.mp3")
+    else:
+        btn.config(bg="#ff4757")
+        play_sound("wrong.mp3")
+    score_label.config(text=f"النقاط: {score}")
+    for b in buttons_frame.winfo_children():
+        b.config(state="disabled")
+    next_btn.pack(pady=10)
+
+def next_question():
+    global current_question, time_left
+    current_question += 1
+    if current_question < len(questions):
+        show_question()
+        next_btn.pack_forget()
+    else:
+        save_highscore(score)
+        show_final_score()
+
+def countdown():
+    global time_left
+    if time_left > 0:
+        time_left -= 1
+        timer_label.config(text=f"الوقت: {time_left}")
+        root.after(1000, countdown)
+    else:
+        next_question()
+
+def show_question():
+    global time_left, photo
+    question = questions[current_question]
+    time_left = 15
+    timer_label.config(text=f"الوقت: {time_left}")
+    countdown()
+    
+    # تحديث الخلفية
+    bg = backgrounds[current_question % len(backgrounds)]
+    root.config(bg=bg)
+    question_label.config(bg=bg)
+    buttons_frame.config(bg=bg)
+    score_label.config(bg=bg)
+    timer_label.config(bg=bg)
+    image_label.config(bg=bg)
+    
+    # عرض السؤال
+    question_label.config(text=question["question"])
+    
+    # عرض الصورة
+    if "image" in question:
+        img = Image.open(question["image"])
+        img = img.resize((450, 250))
+        photo = ImageTk.PhotoImage(img)
+        image_label.config(image=photo)
+    else:
+        image_label.config(image='')
+
+    # إنشاء أزرار الإجابات
+    for widget in buttons_frame.winfo_children():
+        widget.destroy()
+    
+    answers = question["answers"]
+    shuffle(answers)
+    for ans in answers:
+        btn = tk.Button(buttons_frame, text=ans, font=("Cairo", 14), width=18, bg="#ff6b6b", fg="#fff")
+        btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#ff4757"))
+        btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#ff6b6b"))
+        btn.config(command=lambda a=ans, b=btn: check_answer(a, b))
+        btn.pack(pady=6)
+
+# ---------------- حفظ واستدعاء النقاط ----------------
+def save_highscore(score):
+    scores = []
+    if os.path.exists(score_file):
+        with open(score_file, "r", encoding="utf-8") as f:
+            for line in f:
+                scores.append(int(line.strip()))
+    scores.append(score)
+    scores.sort(reverse=True)
+    scores = scores[:max_highscores]
+    with open(score_file, "w", encoding="utf-8") as f:
+        for s in scores:
+            f.write(f"{s}\n")
+
+def show_final_score():
+    root.destroy()
+    # إنشاء نافذة جديدة للنتيجة
+    final_root = tk.Tk()
+    final_root.title("النتيجة النهائية")
+    final_root.geometry("500x500")
+    final_root.resizable(False, False)
+    
+    tk.Label(final_root, text=f"نتيجتك: {score}", font=("Cairo", 20), fg="#1dd1a1").pack(pady=20)
+    tk.Label(final_root, text="أفضل النتائج:", font=("Cairo", 18), fg="#ffdd57").pack(pady=10)
+    
+    if os.path.exists(score_file):
+        with open(score_file, "r", encoding="utf-8") as f:
+            highscores = [line.strip() for line in f.readlines()]
+        for i, s in enumerate(highscores, 1):
+            tk.Label(final_root, text=f"{i}. {s}", font=("Cairo", 16), fg="#fff").pack(pady=5)
+    
+    tk.Button(final_root, text="خروج", font=("Cairo", 14), bg="#ff6b6b", fg="#fff", command=final_root.destroy).pack(pady=30)
+    final_root.mainloop()
+
+# ربط زر السؤال التالي
+next_btn.config(command=next_question)
+
+# بدء اللعبة
+show_question()
+root.mainloop()
