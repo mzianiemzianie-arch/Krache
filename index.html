@@ -1,38 +1,33 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<title>Chat AI</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-body{background:#0f172a;font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;color:white}
-.box{width:100%;max-width:420px;background:#020617;padding:15px;border-radius:12px}
-#messages{height:300px;overflow-y:auto;margin-bottom:10px}
-.user{color:#38bdf8;margin:6px 0}
-.bot{color:#22c55e;margin:6px 0}
-input,button{width:100%;padding:10px;border:none;border-radius:8px}
-button{margin-top:8px;background:#22c55e;cursor:pointer}
-</style>
+  <meta charset="UTF-8">
+  <title>ChatApp</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="box">
-    <div id="messages"></div>
-    <input id="input" placeholder="اكتب سؤالك هنا..." />
-    <button onclick="send()">إرسال</button>
+
+<div id="auth">
+  <h2>تسجيل / دخول</h2>
+  <input id="email" placeholder="البريد الإلكتروني">
+  <input id="password" type="password" placeholder="كلمة المرور">
+  <input id="username" placeholder="اسم المستخدم">
+  <button onclick="register()">تسجيل</button>
+  <button onclick="login()">دخول</button>
 </div>
-<script>
-async function send(){
-    let input=document.getElementById("input");
-    let msg=input.value;
-    if(!msg) return;
-    let messages=document.getElementById("messages");
-    messages.innerHTML+=`<div class="user">🧑 ${msg}</div>`;
-    input.value="";
-    let res=await fetch("/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg})});
-    let data=await res.json();
-    messages.innerHTML+=`<div class="bot">🤖 ${data.response}</div>`;
-    messages.scrollTop=messages.scrollHeight;
-}
-</script>
+
+<div id="chat" style="display:none;">
+  <h3 id="me"></h3>
+  <div id="messages"></div>
+  <input id="msg" placeholder="اكتب رسالة">
+  <button onclick="send()">إرسال</button>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script src="app.js"></script>
 </body>
 </html>
