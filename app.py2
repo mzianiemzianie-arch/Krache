@@ -1,36 +1,71 @@
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-from openai import OpenAI
+// 🔥 ضع بيانات Firebase الخاصة بك هنا
+const firebaseConfig = {
+  apiKey: "API_KEY",
+  authDomain: "PROJECT.firebaseapp.com",
+  projectId: "PROJECT_ID",
+};
 
-app = Flask(__name__)
-CORS(app)
+firebase.initializeApp(firebaseConfig);
 
-# 🔴 المفتاح مدموج مباشرة (كما طلبت)
-HF_TOKEN = "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"
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-client = OpenAI(
-    base_url="https://router.huggingface.co/v1",
-    api_key=HF_TOKEN
-)
+let currentUser = null;
 
-@app.route("/chat", methods=["POST"])
-def chat():
-    data = request.json
-    msg = data.get("message", "")
+// تسجيل
+function register() {
+  const email = email.value;
+  const pass = password.value;
+  const user = username.value;
 
-    try:
-        completion = client.chat.completions.create(
-            model="moonshotai/Kimi-K2-Instruct-0905",
-            messages=[{"role": "user", "content": msg}]
-        )
-        reply = completion.choices[0].message.content
-        return jsonify({"response": reply})
-    except Exception as e:
-        return jsonify({"response": f"خطأ: {str(e)}"})
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then(res => {
+      db.collection("users").doc(res.user.uid).set({
+        username: user
+      });
+      alert("تم التسجيل");
+    });
+}
 
-@app.route("/")
-def index():
-    return send_from_directory(".", "index.html")
+// دخول
+function login() {
+  auth.signInWithEmailAndPassword(email.value, password.value)
+    .then(res => {
+      currentUser = res.user;
+      document.getElementById("auth").style.display="none";
+      document.getElementById("chat").style.display="block";
+      loadUser();
+      loadMessages();
+    });
+}
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+// تحميل اسم المستخدم
+function loadUser() {
+  db.collection("users").doc(currentUser.uid).get()
+    .then(doc=>{
+      me.innerText = "أنت: " + doc.data().username;
+    });
+}
+
+// إرسال رسالة
+function send() {
+  db.collection("messages").add({
+    uid: currentUser.uid,
+    text: msg.value,
+    time: Date.now()
+  });
+  msg.value="";
+}
+
+// استقبال الرسائل (فوري)
+function loadMessages() {
+  db.collection("messages")
+    .orderBy("time")
+    .onSnapshot(snapshot=>{
+      messages.innerHTML="";
+      snapshot.forEach(doc=>{
+        const d = doc.data();
+        messages.innerHTML += `<p>${d.text}</p>`;
+      });
+    });
+}
