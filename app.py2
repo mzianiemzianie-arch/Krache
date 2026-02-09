@@ -14,58 +14,75 @@ let currentUser = null;
 
 // تسجيل
 function register() {
-  const email = email.value;
-  const pass = password.value;
-  const user = username.value;
+  const emailVal = document.getElementById("email").value;
+  const passVal = document.getElementById("password").value;
+  const userVal = document.getElementById("username").value;
 
-  auth.createUserWithEmailAndPassword(email, pass)
+  if (!emailVal || !passVal || !userVal) {
+    alert("يرجى ملء جميع الحقول");
+    return;
+  }
+
+  auth.createUserWithEmailAndPassword(emailVal, passVal)
     .then(res => {
-      db.collection("users").doc(res.user.uid).set({
-        username: user
+      return db.collection("users").doc(res.user.uid).set({
+        username: userVal
       });
-      alert("تم التسجيل");
-    });
+    })
+    .then(() => {
+      alert("تم التسجيل بنجاح");
+    })
+    .catch(err => alert(err.message));
 }
 
 // دخول
 function login() {
-  auth.signInWithEmailAndPassword(email.value, password.value)
+  const emailVal = document.getElementById("email").value;
+  const passVal = document.getElementById("password").value;
+
+  auth.signInWithEmailAndPassword(emailVal, passVal)
     .then(res => {
       currentUser = res.user;
-      document.getElementById("auth").style.display="none";
-      document.getElementById("chat").style.display="block";
+      document.getElementById("auth").style.display = "none";
+      document.getElementById("chat").style.display = "block";
       loadUser();
       loadMessages();
-    });
+    })
+    .catch(err => alert(err.message));
 }
 
 // تحميل اسم المستخدم
 function loadUser() {
   db.collection("users").doc(currentUser.uid).get()
-    .then(doc=>{
-      me.innerText = "أنت: " + doc.data().username;
+    .then(doc => {
+      document.getElementById("me").innerText =
+        "أنت: " + doc.data().username;
     });
 }
 
 // إرسال رسالة
 function send() {
+  const msgVal = document.getElementById("msg").value;
+  if (!msgVal) return;
+
   db.collection("messages").add({
     uid: currentUser.uid,
-    text: msg.value,
+    text: msgVal,
     time: Date.now()
   });
-  msg.value="";
+
+  document.getElementById("msg").value = "";
 }
 
 // استقبال الرسائل (فوري)
 function loadMessages() {
   db.collection("messages")
     .orderBy("time")
-    .onSnapshot(snapshot=>{
-      messages.innerHTML="";
-      snapshot.forEach(doc=>{
-        const d = doc.data();
-        messages.innerHTML += `<p>${d.text}</p>`;
+    .onSnapshot(snapshot => {
+      const messagesDiv = document.getElementById("messages");
+      messagesDiv.innerHTML = "";
+      snapshot.forEach(doc => {
+        messagesDiv.innerHTML += `<p>${doc.data().text}</p>`;
       });
     });
 }
